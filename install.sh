@@ -86,6 +86,9 @@ source "${LIB_DIR}/tmux.sh"
 if [[ "$MODE" == "desktop" || "$MODE" == "full" ]]; then
     log "=== Running LXQt Desktop Setup ==="
     source "${LIB_DIR}/desktop-lxqt.sh"
+
+    log "=== Running Browser Setup ==="
+    source "${LIB_DIR}/browser.sh"
 fi
 
 # Future full mode additions can go here
