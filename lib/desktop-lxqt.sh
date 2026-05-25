@@ -5,8 +5,9 @@
 # Goals:
 # - Minimal, clean LXQt installation
 # - No LibreOffice or other heavy bloat
-# - Dark theme applied by default
-# - Reasonable display manager
+# - No Plasma / SDDM
+# - Uses LightDM (much more appropriate for LXQt)
+# - Dark theme applied where possible
 # - Idempotent where practical
 #
 
@@ -18,7 +19,7 @@ source "${SCRIPT_DIR}/utils.sh"
 log "Starting debloated LXQt desktop setup"
 
 # -----------------------------------------------------------------------------
-# 1. Install minimal LXQt packages (avoiding the full desktop task)
+# 1. Install minimal LXQt packages
 # -----------------------------------------------------------------------------
 log "Installing minimal LXQt packages..."
 
@@ -33,14 +34,15 @@ apt_install \
     lxqt-powermanagement \
     lxqt-notificationd \
     lxqt-policykit \
-    sddm \
+    lightdm \
+    lightdm-gtk-greeter \
     breeze-icon-theme \
     oxygen-icon-theme
 
 # -----------------------------------------------------------------------------
-# 2. Remove common bloat that tends to sneak in
+# 2. Remove common bloat (LibreOffice, etc.)
 # -----------------------------------------------------------------------------
-log "Removing bloat packages (LibreOffice, etc.)..."
+log "Removing bloat packages..."
 
 BLOAT_PACKAGES=(
     libreoffice*
@@ -54,6 +56,9 @@ BLOAT_PACKAGES=(
     thunderbird
     evolution
     transmission*
+    sddm*
+    plasma*
+    kde*
 )
 
 for pkg in "${BLOAT_PACKAGES[@]}"; do
@@ -66,25 +71,23 @@ done
 sudo apt autoremove --purge -y
 
 # -----------------------------------------------------------------------------
-# 3. Set SDDM as default display manager (non-interactive)
+# 3. Configure LightDM as the default display manager (non-interactive)
 # -----------------------------------------------------------------------------
-log "Configuring SDDM as display manager..."
+log "Configuring LightDM as display manager..."
 
 sudo debconf-set-selections <<EOF
-sddm shared/default-display-manager select /usr/sbin/sddm
+lightdm shared/default-display-manager select /usr/sbin/lightdm
 EOF
 
-sudo dpkg-reconfigure -f noninteractive sddm
+sudo dpkg-reconfigure -f noninteractive lightdm
 
 # -----------------------------------------------------------------------------
 # 4. Apply dark theme
 # -----------------------------------------------------------------------------
 log "Applying dark theme to LXQt..."
 
-# Create user config directory
 mkdir -p "$HOME/.config/lxqt"
 
-# Set Breeze Dark as the default theme where possible
 cat > "$HOME/.config/lxqt/lxqt.conf" << 'EOF'
 [General]
 __userfile__=true
@@ -92,8 +95,9 @@ icon_theme=breeze-dark
 theme=Breeze Dark
 EOF
 
-# Set Qt style and icon theme for better dark appearance
-mkdir -p "$HOME/.config/qt5ct"
+# Qt dark theme settings
+mkdir -p "$HOME/.config/qt5ct" "$HOME/.config/qt6ct"
+
 cat > "$HOME/.config/qt5ct/qt5ct.conf" << 'EOF'
 [Appearance]
 color_scheme=Breeze Dark
@@ -101,8 +105,6 @@ icon_theme=breeze-dark
 style=Breeze
 EOF
 
-# Also set for Qt6 if present
-mkdir -p "$HOME/.config/qt6ct"
 cat > "$HOME/.config/qt6ct/qt6ct.conf" << 'EOF'
 [Appearance]
 color_scheme=Breeze Dark
@@ -110,10 +112,5 @@ icon_theme=breeze-dark
 style=Breeze
 EOF
 
-# -----------------------------------------------------------------------------
-# 5. Set default terminal to qterminal (already installed)
-# -----------------------------------------------------------------------------
-# This is mostly handled by the minimal package set.
-
 log "LXQt desktop setup complete"
-log "A reboot or logout/login is recommended for the desktop to fully appear."
+log "A reboot is recommended after this run."
