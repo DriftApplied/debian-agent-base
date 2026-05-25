@@ -1,0 +1,17 @@
+# Ignore sensitive files
+*.token
+*.secret
+ghp_*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Temporary / backup
+*.bak
+*~
+*.swp
