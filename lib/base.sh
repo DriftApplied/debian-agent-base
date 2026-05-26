@@ -24,8 +24,8 @@ run sudo apt upgrade -y
 # 2. Essential Packages
 # -----------------------------------------------------------------------------
 log "Installing essential packages"
-# Load package list from config file
-mapfile -t BASE_PACKAGES < "${SCRIPT_DIR}/../config/packages/base.packages"
+# Load package list from config file (skip comment lines)
+mapfile -t BASE_PACKAGES < <(grep -v '^#' "$SCRIPT_DIR/../config/packages/base.packages" | grep -v '^$')
 apt_install "${BASE_PACKAGES[@]}"
 
 # -----------------------------------------------------------------------------

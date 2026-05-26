@@ -24,8 +24,8 @@ log "Starting network manager setup"
 # It doesn't include the full GUI or heavy dependencies by default
 log "Installing NetworkManager..."
 
-# Load package list from config file
-mapfile -t NETWORK_PACKAGES < "${SCRIPT_DIR}/../config/packages/network.packages"
+# Load package list from config file (skip comment lines)
+mapfile -t NETWORK_PACKAGES < <(grep -v '^#' "$SCRIPT_DIR/../config/packages/network.packages" | grep -v '^$')
 apt_install "${NETWORK_PACKAGES[@]}"
 
 # -----------------------------------------------------------------------------
