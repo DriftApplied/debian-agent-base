@@ -20,7 +20,16 @@ log "Starting browser setup"
 # 1. Install Chromium
 # -----------------------------------------------------------------------------
 log "Installing Chromium browser (Debian package)..."
-apt_install chromium
+# Chromium is in the non-free repository on Debian
+if ! command_exists chromium; then
+    # Ensure non-free repos are available for chromium
+    if ! grep -q "non-free" /etc/apt/sources.list 2>/dev/null; then
+        log "Adding non-free to sources.list for chromium..."
+        sudo sed -i 's/main/main non-free/g' /etc/apt/sources.list
+        sudo apt update
+    fi
+    apt_install chromium
+fi
 
 # -----------------------------------------------------------------------------
 # 2. Optional quality-of-life tweaks (minimal)

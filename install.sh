@@ -67,27 +67,8 @@ log "Starting Debian Agent Base installer"
 log "Mode: $MODE"
 
 # =============================================================================
-# Source Libraries
-# =============================================================================
-source "${LIB_DIR}/utils.sh"
-
-# =============================================================================
 # Main Execution
 # =============================================================================
-
-# Function to conditionally execute commands based on dry-run mode
-execute_step() {
-    local step_name="$1"
-    local step_command="$2"
-    
-    if [[ "$DRY_RUN" == true ]]; then
-        log "[DRY-RUN] Would execute: $step_name"
-        log "[DRY-RUN] Command: $step_command"
-    else
-        log "=== $step_name ==="
-        eval "$step_command"
-    fi
-}
 
 # Always run hardware detection first (helps inform other steps)
 if [[ "$DRY_RUN" == true ]]; then
