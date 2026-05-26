@@ -74,6 +74,10 @@ source "${LIB_DIR}/utils.sh"
 log "=== Running Base Setup ==="
 source "${LIB_DIR}/base.sh"
 
+# Network manager (essential for wifi connectivity)
+log "=== Running Network Manager Setup ==="
+source "${LIB_DIR}/network.sh"
+
 # nvm + Kilo CLI (core requirement)
 log "=== Running nvm + Kilo CLI Setup ==="
 source "${LIB_DIR}/nvm-kilo.sh"
@@ -86,6 +90,9 @@ source "${LIB_DIR}/tmux.sh"
 if [[ "$MODE" == "desktop" || "$MODE" == "full" ]]; then
     log "=== Running LXQt Desktop Setup ==="
     source "${LIB_DIR}/desktop-lxqt.sh"
+
+    log "=== Running Browser Setup ==="
+    source "${LIB_DIR}/browser.sh"
 fi
 
 # Future full mode additions can go here
