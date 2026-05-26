@@ -74,6 +74,10 @@ source "${LIB_DIR}/utils.sh"
 log "=== Running Base Setup ==="
 source "${LIB_DIR}/base.sh"
 
+# Network manager (essential for wifi connectivity)
+log "=== Running Network Manager Setup ==="
+source "${LIB_DIR}/network.sh"
+
 # nvm + Kilo CLI (core requirement)
 log "=== Running nvm + Kilo CLI Setup ==="
 source "${LIB_DIR}/nvm-kilo.sh"

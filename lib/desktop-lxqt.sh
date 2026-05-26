@@ -44,28 +44,12 @@ apt_install \
 # -----------------------------------------------------------------------------
 log "Removing bloat packages..."
 
-BLOAT_PACKAGES=(
-    libreoffice*
-    mythes-*
-    hyphen-*
-    hunspell-*
-    orage
-    mousepad
-    ristretto
-    vlc
-    thunderbird
-    evolution
-    transmission*
-    sddm*
-    plasma*
-    kde*
-)
-
-for pkg in "${BLOAT_PACKAGES[@]}"; do
-    if dpkg -l | grep -q "^ii  $pkg"; then
+# Use dpkg with grep to find matching packages, then purge them
+for pattern in libreoffice mythes hyphen hunspell orage mousepad ristretto vlc thunderbird evolution transmission sddm plasma kde; do
+    for pkg in $(dpkg -l | grep "^ii  ${pattern}" | awk '{print $2}'); do
         log "Purging: $pkg"
         sudo apt purge -y "$pkg" 2>/dev/null || true
-    fi
+    done
 done
 
 sudo apt autoremove --purge -y
@@ -110,6 +94,27 @@ cat > "$HOME/.config/qt6ct/qt6ct.conf" << 'EOF'
 color_scheme=Breeze Dark
 icon_theme=breeze-dark
 style=Breeze
+EOF
+
+# -----------------------------------------------------------------------------
+# 5. Network Manager applet auto-start (for LXQt)
+# -----------------------------------------------------------------------------
+log "Configuring nm-applet auto-start..."
+
+mkdir -p "$HOME/.config/autostart"
+
+cat > "$HOME/.config/autostart/nm-applet.desktop" << 'EOF'
+[Desktop Entry]
+Name=Network Manager Applet
+Comment=Manage network connections
+Exec=nm-applet --indicator
+Icon=network-wireless
+Terminal=false
+Type=Application
+NoDisplay=false
+Hidden=false
+X-GNOME-Autostart-Phase=Initialization
+X-GNOME-AutoRestart=true
 EOF
 
 log "LXQt desktop setup complete"
