@@ -1,0 +1,16 @@
+# Base system packages
+build-essential
+curl
+wget
+git
+rsync
+ca-certificates
+gnupg
+htop
+tree
+ncdu
+ripgrep
+fd-find
+tmux
+openssh-server
+lm-sensors

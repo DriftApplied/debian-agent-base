@@ -45,11 +45,16 @@ apt_install \
 log "Removing bloat packages..."
 
 # Use dpkg with grep to find matching packages, then purge them
+# More robust approach: get exact package names first to avoid missing packages
 for pattern in libreoffice mythes hyphen hunspell orage mousepad ristretto vlc thunderbird evolution transmission sddm plasma kde; do
-    for pkg in $(dpkg -l | grep "^ii  ${pattern}" | awk '{print $2}'); do
-        log "Purging: $pkg"
-        sudo apt purge -y "$pkg" 2>/dev/null || true
-    done
+    # Get exact package names matching the pattern
+    pkg_list=$(dpkg -l | grep "^ii  ${pattern}" | awk '{print $2}')
+    if [ -n "$pkg_list" ]; then
+        for pkg in $pkg_list; do
+            log "Purging: $pkg"
+            sudo apt purge -y "$pkg" 2>/dev/null || true
+        done
+    fi
 done
 
 sudo apt autoremove --purge -y

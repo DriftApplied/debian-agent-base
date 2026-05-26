@@ -1,0 +1,8 @@
+# Network manager packages
+network-manager
+network-manager-gnome
+wireless-tools
+iw
+firmware-linux
+firmware-linux-nonfree
+firmware-misc-nonfree

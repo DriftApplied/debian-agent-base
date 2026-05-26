@@ -24,14 +24,9 @@ log "Starting network manager setup"
 # It doesn't include the full GUI or heavy dependencies by default
 log "Installing NetworkManager..."
 
-apt_install \
-    network-manager \
-    network-manager-gnome \
-    wireless-tools \
-    iw \
-    firmware-linux \
-    firmware-linux-nonfree \
-    firmware-misc-nonfree
+# Load package list from config file
+mapfile -t NETWORK_PACKAGES < "${SCRIPT_DIR}/../config/packages/network.packages"
+apt_install "${NETWORK_PACKAGES[@]}"
 
 # -----------------------------------------------------------------------------
 # 2. Ensure NetworkManager service is running and enabled
@@ -41,12 +36,12 @@ log "Enabling NetworkManager service..."
 # Stop and disable if systemd-networkd is running (common conflict)
 if systemctl is-active --quiet systemd-networkd 2>/dev/null; then
     log "Stopping systemd-networkd (conflicts with NetworkManager)"
-    sudo systemctl stop systemd-networkd || true
-    sudo systemctl disable systemd-networkd || true
+    run_or_warn sudo systemctl stop systemd-networkd
+    run_or_warn sudo systemctl disable systemd-networkd
 fi
 
 # Enable and start NetworkManager
-sudo systemctl enable --now NetworkManager || true
+run_or_warn sudo systemctl enable --now NetworkManager
 
 # -----------------------------------------------------------------------------
 # 3. Create CLI helper script for network selection

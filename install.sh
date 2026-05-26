@@ -17,21 +17,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_DIR="${SCRIPT_DIR}/lib"
 
-# =============================================================================
-# Logging
-# =============================================================================
-log() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"
-}
-
-error() {
-    echo "[ERROR] $*" >&2
-}
+# Source utilities early so we can use logging functions
+source "${LIB_DIR}/utils.sh"
 
 # =============================================================================
 # Argument Parsing
 # =============================================================================
 MODE="base"
+DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -43,12 +36,24 @@ while [[ $# -gt 0 ]]; do
             MODE="full"
             shift
             ;;
+        --dry-run|--test)
+            DRY_RUN=true
+            shift
+            ;;
         --help|-h)
-            echo "Usage: $0 [--desktop | --full]"
+            echo "Usage: $0 [--desktop | --full] [--dry-run|--test]"
             echo ""
             echo "  (no flag)   Install base only (recommended)"
             echo "  --desktop   Install base + LXQt desktop"
             echo "  --full      Install base + desktop + future additions"
+            echo "  --dry-run   Show what would be done without making changes"
+            echo "  --test      Alias for --dry-run"
+            echo ""
+            echo "Examples:"
+            echo "  $0                  # Base installation"
+            echo "  $0 --desktop        # Base + LXQt desktop"
+            echo "  $0 --full           # Base + desktop + future additions"
+            echo "  $0 --dry-run        # See what would be installed"
             exit 0
             ;;
         *)
@@ -70,35 +75,93 @@ source "${LIB_DIR}/utils.sh"
 # Main Execution
 # =============================================================================
 
+# Function to conditionally execute commands based on dry-run mode
+execute_step() {
+    local step_name="$1"
+    local step_command="$2"
+    
+    if [[ "$DRY_RUN" == true ]]; then
+        log "[DRY-RUN] Would execute: $step_name"
+        log "[DRY-RUN] Command: $step_command"
+    else
+        log "=== $step_name ==="
+        eval "$step_command"
+    fi
+}
+
+# Always run hardware detection first (helps inform other steps)
+if [[ "$DRY_RUN" == true ]]; then
+    log "[DRY-RUN] Would execute: Hardware Detection"
+    log "[DRY-RUN] Command: source \"${LIB_DIR}/hardware-detect.sh\""
+else
+    log "=== Running Hardware Detection ==="
+    source "${LIB_DIR}/hardware-detect.sh"
+fi
+
 # Always run base
-log "=== Running Base Setup ==="
-source "${LIB_DIR}/base.sh"
+if [[ "$DRY_RUN" == true ]]; then
+    log "[DRY-RUN] Would execute: Base Setup"
+    log "[DRY-RUN] Command: source \"${LIB_DIR}/base.sh\""
+else
+    log "=== Running Base Setup ==="
+    source "${LIB_DIR}/base.sh"
+fi
 
 # Network manager (essential for wifi connectivity)
-log "=== Running Network Manager Setup ==="
-source "${LIB_DIR}/network.sh"
+if [[ "$DRY_RUN" == true ]]; then
+    log "[DRY-RUN] Would execute: Network Manager Setup"
+    log "[DRY-RUN] Command: source \"${LIB_DIR}/network.sh\""
+else
+    log "=== Running Network Manager Setup ==="
+    source "${LIB_DIR}/network.sh"
+fi
 
 # nvm + Kilo CLI (core requirement)
-log "=== Running nvm + Kilo CLI Setup ==="
-source "${LIB_DIR}/nvm-kilo.sh"
+if [[ "$DRY_RUN" == true ]]; then
+    log "[DRY-RUN] Would execute: nvm + Kilo CLI Setup"
+    log "[DRY-RUN] Command: source \"${LIB_DIR}/nvm-kilo.sh\""
+else
+    log "=== Running nvm + Kilo CLI Setup ==="
+    source "${LIB_DIR}/nvm-kilo.sh"
+fi
 
 # tmux (highly recommended for this workflow)
-log "=== Running tmux Setup ==="
-source "${LIB_DIR}/tmux.sh"
+if [[ "$DRY_RUN" == true ]]; then
+    log "[DRY-RUN] Would execute: tmux Setup"
+    log "[DRY-RUN] Command: source \"${LIB_DIR}/tmux.sh\""
+else
+    log "=== Running tmux Setup ==="
+    source "${LIB_DIR}/tmux.sh"
+fi
 
 # Desktop layers
 if [[ "$MODE" == "desktop" || "$MODE" == "full" ]]; then
-    log "=== Running LXQt Desktop Setup ==="
-    source "${LIB_DIR}/desktop-lxqt.sh"
+    if [[ "$DRY_RUN" == true ]]; then
+        log "[DRY-RUN] Would execute: LXQt Desktop Setup"
+        log "[DRY-RUN] Command: source \"${LIB_DIR}/desktop-lxqt.sh\""
+    else
+        log "=== Running LXQt Desktop Setup ==="
+        source "${LIB_DIR}/desktop-lxqt.sh"
+    fi
 
-    log "=== Running Browser Setup ==="
-    source "${LIB_DIR}/browser.sh"
+    if [[ "$DRY_RUN" == true ]]; then
+        log "[DRY-RUN] Would execute: Browser Setup"
+        log "[DRY-RUN] Command: source \"${LIB_DIR}/browser.sh\""
+    else
+        log "=== Running Browser Setup ==="
+        source "${LIB_DIR}/browser.sh"
+    fi
 fi
 
 # Future full mode additions can go here
 if [[ "$MODE" == "full" ]]; then
-    log "=== Running Full Mode Additions ==="
-    # Add future modules here
+    if [[ "$DRY_RUN" == true ]]; then
+        log "[DRY-RUN] Would execute: Full Mode Additions"
+        log "[DRY-RUN] Command: # Add future modules here"
+    else
+        log "=== Running Full Mode Additions ==="
+        # Add future modules here
+    fi
 fi
 
 log "=== Installation Complete ==="

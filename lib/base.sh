@@ -8,7 +8,8 @@
 set -euo pipefail
 
 # Source utilities
-source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/utils.sh"
 
 log "Starting base system setup"
 
@@ -16,27 +17,16 @@ log "Starting base system setup"
 # 1. System Update
 # -----------------------------------------------------------------------------
 log "Updating package lists and upgrading system"
-sudo apt update
-sudo apt upgrade -y
+run sudo apt update
+run sudo apt upgrade -y
 
 # -----------------------------------------------------------------------------
 # 2. Essential Packages
 # -----------------------------------------------------------------------------
-apt_install \
-    build-essential \
-    curl \
-    wget \
-    git \
-    rsync \
-    ca-certificates \
-    gnupg \
-    htop \
-    tree \
-    ncdu \
-    ripgrep \
-    fd-find \
-    tmux \
-    openssh-server
+log "Installing essential packages"
+# Load package list from config file
+mapfile -t BASE_PACKAGES < "${SCRIPT_DIR}/../config/packages/base.packages"
+apt_install "${BASE_PACKAGES[@]}"
 
 # -----------------------------------------------------------------------------
 # 3. lm-sensors (auto-configured)
@@ -45,7 +35,7 @@ apt_install lm-sensors
 
 if ! command_exists sensors; then
     log "Configuring lm-sensors (non-interactive)"
-    sudo sensors-detect --auto
+    run sudo sensors-detect --auto
 else
     log "lm-sensors already appears to be configured"
 fi
@@ -76,7 +66,7 @@ alias l='ls -CF'
 EOF
 
 # Source .bashrc.d in .bashrc if not already present
-if ! grep -q ".bashrc.d" "$HOME/.bashrc" 2>/dev/null; then
+if ! grep -q "# Load custom bash configuration" "$HOME/.bashrc" 2>/dev/null; then
     echo '
 # Load custom bash configuration
 for file in ~/.bashrc.d/*.sh; do
@@ -89,7 +79,7 @@ fi
 # 5. SSH Server
 # -----------------------------------------------------------------------------
 log "Ensuring SSH server is enabled"
-sudo systemctl enable --now ssh
+run sudo systemctl enable --now ssh
 
 # -----------------------------------------------------------------------------
 # 6. Git Basics (light configuration)
