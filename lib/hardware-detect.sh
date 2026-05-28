@@ -112,10 +112,20 @@ hw_log ""
 hw_log "Network Interfaces:"
 hw_log "Wired interfaces:"
 # Common wired interface prefixes: eno, ens, enp, enx, eth, em
-ip -o link show | grep -E '^[0-9]+: (eno|ens|enp|enx|eth|em)' | tee -a "$HW_INFO_FILE"
+wired_matches=$(ip -o link show | grep -E '^[0-9]+: (eno|ens|enp|enx|eth|em)' || true)
+if [[ -n "$wired_matches" ]]; then
+    echo "$wired_matches" | tee -a "$HW_INFO_FILE"
+else
+    hw_log "  None detected"
+fi
 hw_log "Wireless interfaces:"
 # Common wireless interface prefixes: wlan, wifi, wlx, ath, ww
-ip -o link show | grep -E '^[0-9]+: (wlan|wifi|wlx|ath|ww)' | tee -a "$HW_INFO_FILE"
+wireless_matches=$(ip -o link show | grep -E '^[0-9]+: (wlan|wifi|wlx|ath|ww)' || true)
+if [[ -n "$wireless_matches" ]]; then
+    echo "$wireless_matches" | tee -a "$HW_INFO_FILE"
+else
+    hw_log "  None detected"
+fi
 hw_log ""
 
 # -----------------------------------------------------------------------------
