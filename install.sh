@@ -63,6 +63,26 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+ERROR_OCCURRED=0
+trap 'ERROR_OCCURRED=1' ERR
+
+report_status() {
+    if [[ "${DRY_RUN:-false}" == true ]]; then
+        log "=== Dry run complete: no changes were made ==="
+        log "Re-run without --dry-run to perform the installation and reboot afterward."
+        return
+    fi
+
+    if [[ "$ERROR_OCCURRED" -eq 0 ]]; then
+        log "=== Installation completed successfully ==="
+    else
+        log "=== Installation encountered errors (see logs above) ==="
+    fi
+    log "Please reboot or log out/in to ensure all changes take effect."
+}
+
+trap 'report_status' EXIT
+
 log "Starting Debian Agent Base installer"
 log "Mode: $MODE"
 
@@ -144,6 +164,3 @@ if [[ "$MODE" == "full" ]]; then
         # Add future modules here
     fi
 fi
-
-log "=== Installation Complete ==="
-log "You may want to log out and back in (or reboot) for all changes to take effect."
