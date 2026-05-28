@@ -20,14 +20,22 @@ log "Starting hardware detection"
 HW_INFO_FILE="/tmp/hardware-info.txt"
 : > "$HW_INFO_FILE"
 
-# Function to append to hardware info file and also log
 hw_log() {
-    echo "$*" | tee -a "$HW_INFO_FILE"
+    log "$*"
 }
 
-hw_log "=== Hardware Detection Summary ==="
-hw_log "Timestamp: $(date)"
-hw_log "Hostname: $(hostname)"
+hw_summary_line() {
+    echo "$*" >> "$HW_INFO_FILE"
+}
+
+hw_log_summary() {
+    hw_log "$*"
+    hw_summary_line "$*"
+}
+
+hw_log_summary "=== Hardware Detection Summary ==="
+hw_log_summary "Timestamp: $(date)"
+hw_log_summary "Hostname: $(hostname)"
 hw_log ""
 
 # -----------------------------------------------------------------------------
@@ -35,15 +43,23 @@ hw_log ""
 # -----------------------------------------------------------------------------
 hw_log "CPU Information:"
 if command_exists lscpu; then
-    lscpu | tee -a "$HW_INFO_FILE"
+    run lscpu
 else
-    # Fallback to /proc/cpuinfo
-    hw_log "Model: $(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | sed 's/^ //')"
-    hw_log "Architecture: $(grep 'architecture' /proc/cpuinfo | head -1 | cut -d: -f2 | sed 's/^ //')"
-    hw_log "CPU(s): $(grep '^processor' /proc/cpuinfo | wc -l)"
-    hw_log "Core(s) per socket: $(grep 'core id' /proc/cpuinfo | sort -u | wc -l)"
-    hw_log "Socket(s): $(grep 'physical id' /proc/cpuinfo | sort -u | wc -l)"
+    hw_log "lscpu not available; falling back to /proc/cpuinfo"
 fi
+hw_log ""
+
+cpu_model=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ //')
+cpu_architecture=$(grep -m1 'architecture' /proc/cpuinfo | cut -d: -f2 | sed 's/^ //')
+cpu_count=$(grep -c '^processor' /proc/cpuinfo)
+cpu_cores=$(grep -m1 'core id' /proc/cpuinfo | sort -u | wc -l)
+cpu_sockets=$(grep -m1 'physical id' /proc/cpuinfo | sort -u | wc -l)
+
+[[ -n "$cpu_model" ]] && hw_log_summary "Model: $cpu_model"
+[[ -n "$cpu_architecture" ]] && hw_log_summary "Architecture: $cpu_architecture"
+[[ -n "$cpu_count" ]] && hw_log_summary "CPU(s): $cpu_count"
+[[ -n "$cpu_cores" ]] && hw_log_summary "Core(s) per socket: $cpu_cores"
+[[ -n "$cpu_sockets" ]] && hw_log_summary "Socket(s): $cpu_sockets"
 hw_log ""
 
 # -----------------------------------------------------------------------------
@@ -51,11 +67,16 @@ hw_log ""
 # -----------------------------------------------------------------------------
 hw_log "Memory Information:"
 if command_exists free; then
-    free -h | tee -a "$HW_INFO_FILE"
+    run free -h
 else
-    hw_log "MemTotal: $(grep 'MemTotal' /proc/meminfo | awk '{print $2}') kB"
-    hw_log "MemAvailable: $(grep 'MemAvailable' /proc/meminfo | awk '{print $2}') kB"
+    hw_log "free command not available; reading /proc/meminfo"
 fi
+hw_log ""
+
+mem_total=$(grep 'MemTotal' /proc/meminfo | awk '{print $2}')
+mem_available=$(grep 'MemAvailable' /proc/meminfo | awk '{print $2}')
+[[ -n "$mem_total" ]] && hw_log_summary "MemTotal: ${mem_total} kB"
+[[ -n "$mem_available" ]] && hw_log_summary "MemAvailable: ${mem_available} kB"
 hw_log ""
 
 # -----------------------------------------------------------------------------
@@ -64,21 +85,23 @@ hw_log ""
 hw_log "Storage Information:"
 if command_exists lsblk; then
     hw_log "Disk layout:"
-    lsblk -o NAME,SIZE,TYPE,MOUNTPOINT | tee -a "$HW_INFO_FILE"
+    run lsblk -o NAME,SIZE,TYPE,MOUNTPOINT
 else
     hw_log "Mount points:"
-    mount | grep '^/dev' | tee -a "$HW_INFO_FILE"
+    mount | grep '^/dev' || true
 fi
+hw_log ""
 
 # Check for rotational vs SSD
 if [ -d /sys/block ]; then
     hw_log ""
-    hw_log "Disk rotation type (1=HDD, 0=SSD):"
+    hw_log_summary "Disk rotation type (1=HDD, 0=SSD):"
     for disk in /sys/block/*; do
         diskname=$(basename "$disk")
         if [ -f "$disk/queue/rotational" ]; then
             rotational=$(cat "$disk/queue/rotational")
             hw_log "  $diskname: $rotational"
+            hw_summary_line "  $diskname: $rotational"
         fi
     done
 fi
@@ -89,7 +112,7 @@ hw_log ""
 # -----------------------------------------------------------------------------
 hw_log "PCI Devices:"
 if command_exists lspci; then
-    lspci | tee -a "$HW_INFO_FILE"
+    run lspci
 else
     hw_log "lspci not available; skipping detailed PCI list"
 fi
@@ -100,7 +123,7 @@ hw_log ""
 # -----------------------------------------------------------------------------
 hw_log "USB Devices:"
 if command_exists lsusb; then
-    lsusb | tee -a "$HW_INFO_FILE"
+    run lsusb
 else
     hw_log "lsusb not available; skipping USB list"
 fi
@@ -111,20 +134,22 @@ hw_log ""
 # -----------------------------------------------------------------------------
 hw_log "Network Interfaces:"
 hw_log "Wired interfaces:"
-# Common wired interface prefixes: eno, ens, enp, enx, eth, em
 wired_matches=$(ip -o link show | grep -E '^[0-9]+: (eno|ens|enp|enx|eth|em)' || true)
 if [[ -n "$wired_matches" ]]; then
-    echo "$wired_matches" | tee -a "$HW_INFO_FILE"
+    log "$wired_matches"
+    hw_log_summary "Wired interfaces: $(echo "$wired_matches" | wc -l)"
 else
     hw_log "  None detected"
+    hw_log_summary "Wired interfaces: 0"
 fi
 hw_log "Wireless interfaces:"
-# Common wireless interface prefixes: wlan, wifi, wlx, ath, ww
 wireless_matches=$(ip -o link show | grep -E '^[0-9]+: (wlan|wifi|wlx|ath|ww)' || true)
 if [[ -n "$wireless_matches" ]]; then
-    echo "$wireless_matches" | tee -a "$HW_INFO_FILE"
+    log "$wireless_matches"
+    hw_log_summary "Wireless interfaces: $(echo "$wireless_matches" | wc -l)"
 else
     hw_log "  None detected"
+    hw_log_summary "Wireless interfaces: 0"
 fi
 hw_log ""
 
@@ -133,11 +158,11 @@ hw_log ""
 # -----------------------------------------------------------------------------
 hw_log "Audio Devices:"
 if command_exists lspci; then
-    lspci | grep -i audio | tee -a "$HW_INFO_FILE"
+    lspci | grep -i audio || true
 else
     hw_log "Checking via /proc/asound/cards:"
     if [ -f /proc/asound/cards ]; then
-        cat /proc/asound/cards | tee -a "$HW_INFO_FILE"
+        cat /proc/asound/cards
     else
         hw_log "No audio devices found"
     fi
@@ -149,11 +174,11 @@ hw_log ""
 # -----------------------------------------------------------------------------
 hw_log "Graphics Information:"
 if command_exists lspci; then
-    lspci | grep -i -E 'vga|3d|display' | tee -a "$HW_INFO_FILE"
+    lspci | grep -i -E 'vga|3d|display' || true
 else
     hw_log "Checking /proc/fb:"
     if [ -f /proc/fb ]; then
-        cat /proc/fb | tee -a "$HW_INFO_FILE"
+        cat /proc/fb
     else
         hw_log "No framebuffer devices"
     fi
@@ -174,7 +199,7 @@ hw_log ""
 # -----------------------------------------------------------------------------
 hw_log "Sensors (if available):"
 if command_exists sensors; then
-    sensors | tee -a "$HW_INFO_FILE"
+    run sensors
 else
     hw_log "lm-sensors not installed or no sensors detected"
 fi
