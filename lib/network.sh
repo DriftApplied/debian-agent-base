@@ -53,7 +53,7 @@ mkdir -p "$HOME/.local/bin"
 
 cat > "$HOME/.local/bin/nm-select" << 'EOF'
 #!/usr/bin/env bash
-# Quick wifi network selector using nmcli
+# Quick wifi network browser using nmcli
 
 echo "Scanning for networks..."
 nmcli -t -f ssid,signal,security device wifi list 2>/dev/null | sort -t $'\t' -k2 -nr | head -20 > /tmp/nm-scan.txt
@@ -75,44 +75,9 @@ while IFS=$'\t' read -r ssid signal security; do
 done < /tmp/nm-scan.txt
 
 echo ""
-read -p "Enter network number (or press Enter to cancel): " choice
-
-if [[ -z "$choice" ]]; then
-    echo "Cancelled."
-    exit 0
-fi
-
-# Get the SSID for the chosen number
-selected_ssid=$(sed -n "${choice}p" /tmp/nm-scan.txt | cut -f1)
-
-if [[ -z "$selected_ssid" ]]; then
-    echo "Invalid selection."
-    exit 1
-fi
-
-echo "Connecting to '$selected_ssid'..."
-
-# Check if network is open or secured, and connect accordingly
-line=$(sed -n "${choice}p" /tmp/nm-scan.txt)
-security=$(echo "$line" | cut -f3)
-
-if [[ -z "$security" || "$security" == "--" ]]; then
-    # Open network - connect directly
-    nmcli device wifi connect "$selected_ssid" 2>&1 || {
-        echo "Connection failed."
-        exit 1
-    }
-else
-    # Secured network - nmcli will prompt for password
-    nmcli device wifi connect "$selected_ssid" 2>&1 || {
-        echo ""
-        echo "Connection failed. You may need to connect manually:"
-        echo "  nmcli device wifi connect \"$selected_ssid\" password <your_password>"
-        exit 1
-    }
-fi
-
-echo "Connected. Check status with: nma"
+echo "To connect, run"
+echo "  nmcli device wifi connect \"<SSID>\""
+echo "NetworkManager will prompt for any required credentials afterward."
 EOF
 
 chmod +x "$HOME/.local/bin/nm-select"
