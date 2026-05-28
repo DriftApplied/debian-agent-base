@@ -7,18 +7,44 @@
 
 set -euo pipefail
 
+HW_SUMMARY_FILE="/tmp/hardware-info-summary.txt"
 # Source utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/utils.sh"
 
+enable_nonfree_sources() {
+    local release
+    release=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2 | tr -d '"')
+    if [[ -z "$release" ]]; then
+        warn "Unable to detect Debian release codename; skipping non-free configuration."
+        return 0
+    fi
+
+    local target_file="/etc/apt/sources.list.d/agent-nonfree.list"
+    if [[ -f "$target_file" ]]; then
+        if grep -q "contrib non-free" "$target_file" 2>/dev/null; then
+            log "Non-free repositories already configured in $target_file"
+            return 0
+        fi
+    fi
+
+    log "Enabling contrib/non-free repositories for ${release}"
+    cat <<EOF | sudo tee "$target_file" >/dev/null
+deb http://deb.debian.org/debian ${release} main contrib non-free
+deb http://deb.debian.org/debian ${release}-updates main contrib non-free
+deb http://security.debian.org/debian-security ${release}-security main contrib non-free
+EOF
+}
+
 log "Starting base system setup"
+enable_nonfree_sources
 
 # -----------------------------------------------------------------------------
 # 1. System Update
 # -----------------------------------------------------------------------------
 log "Updating package lists and upgrading system"
-run sudo apt update
-run sudo apt upgrade -y
+retry_run sudo apt update
+retry_run sudo apt upgrade -y
 
 # -----------------------------------------------------------------------------
 # 2. Essential Packages
@@ -41,7 +67,16 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 4. User Environment & Dark Mode
+log "Recording hardware summary for diagnostics"
+if [[ -f "/tmp/hardware-info.txt" ]]; then
+    cp "/tmp/hardware-info.txt" "/tmp/hardware-info-summary.txt"
+    log "Hardware summary saved to /tmp/hardware-info-summary.txt"
+else
+    log "Hardware summary not found; skipping summary copy"
+fi
+
+# -----------------------------------------------------------------------------
+# 5. User Environment & Dark Mode
 # -----------------------------------------------------------------------------
 log "Applying dark console theme and shell improvements"
 

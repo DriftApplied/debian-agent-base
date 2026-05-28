@@ -39,6 +39,28 @@ run_or_warn() {
     return 0
 }
 
+# Retry-aware runner for flaky network commands
+retry_run() {
+    local attempts=3
+    local delay=5
+    local attempt=1
+
+    while true; do
+        if run "$@"; then
+            return 0
+        fi
+
+        if (( attempt >= attempts )); then
+            error "Command failed after ${attempts} attempts: $*"
+            return 1
+        fi
+
+        log "Retrying in ${delay}s (attempt $((attempt + 1))/${attempts})..."
+        sleep "$delay"
+        ((attempt++))
+    done
+}
+
 # Check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -62,7 +84,7 @@ apt_install() {
 
     if [[ ${#to_install[@]} -gt 0 ]]; then
         log "Installing packages: ${to_install[*]}"
-        if sudo apt install -y "${to_install[@]}"; then
+        if retry_run sudo apt install -y "${to_install[@]}"; then
             log "Successfully installed: ${to_install[*]}"
         else
             error "Failed to install packages: ${to_install[*]}"
