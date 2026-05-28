@@ -38,7 +38,7 @@ A personal post-install automation system for Debian Stable.
 ### Main Installer
 - `install.sh` with three modes:
   - `./install.sh` → Base + Network + nvm + Kilo + tmux
-  - `./install.sh --desktop` → Above + debloated LXQt + Chromium
+  - `./install.sh --desktop` → Above + debloated LXQt + Firefox
   - `./install.sh --full` → All of the above + future additions
 
 ## Usage
@@ -47,7 +47,7 @@ On a fresh minimal Debian Stable netinst:
 
 ```bash
 ./install.sh              # Base + Network + nvm + Kilo + tmux
-./install.sh --desktop    # Full desktop experience (LXQt + Chromium + Network Manager applet)
+./install.sh --desktop    # Full desktop experience (LXQt + Firefox + Network Manager applet)
 ```
 
 After running, **log out and back in** (or reboot) for all changes to take effect.
